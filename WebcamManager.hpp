@@ -25,8 +25,8 @@ public:
         }
 
         // wsl 환경 설정
-        cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-        cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+        cap.set(cv::CAP_PROP_FRAME_WIDTH, 1024);
+        cap.set(cv::CAP_PROP_FRAME_HEIGHT, 768);
         cap.set(cv::CAP_PROP_FPS, 30);
         cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
 
