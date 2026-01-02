@@ -1,15 +1,25 @@
 #include "opencv2/opencv.hpp"
 #include <iostream>
 
-extern void runProject();\
+#include <memory>
+#include "WebcamManager.hpp"
+#include "GameStrategy.hpp"
+#include "RedBallGame.hpp"
 
 int main()
 {
     std::cout << "Hello World! CV Version: " << CV_VERSION << std::endl;
-    
-   runProject();   
 
-   return 0;
+    WebcamManager webcam;
+    if (!webcam.initialize()) {
+        return -1;
+    }
+
+    // 전략 패턴 사용: RedBallGame 선택
+    std::unique_ptr<GameStrategy> game = std::make_unique<RedBallGame>(webcam);
+    game->run();
+
+    return 0;
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
