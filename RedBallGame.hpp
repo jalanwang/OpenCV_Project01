@@ -3,6 +3,7 @@
 
 #include "GameStrategy.hpp"
 #include "WebcamManager.hpp"
+#include "SoundManager.hpp"
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <iostream>
@@ -74,6 +75,7 @@ public:
 
                 int area = (redBall.radius * 2) * (redBall.radius * 2);
                 if (movementPixels > area * 0.1) {
+                    SoundManager::playBeep();
                     std::cout << "터치 " << score++ << "\r\n";
                     redBall.position = getRandomPosition(width, height, redBall.radius);
                 }

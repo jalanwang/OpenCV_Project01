@@ -8,7 +8,7 @@ project(OpenCVProject)
 find_package(OpenCV REQUIRED)
 
 # HelloWorld.cpp와 Code1.cpp 소스 파일을 컴파일하여 'main'이라는 이름의 실행 파일을 생성합니다.
-add_executable(main main.cpp WebcamManager.hpp GameStrategy.hpp RedBallGame.hpp)
+add_executable(main main.cpp WebcamManager.hpp GameStrategy.hpp RedBallGame.hpp SoundManager.hpp)
 
 # 헤더 파일 경로 포함 (현재 디렉토리)
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
