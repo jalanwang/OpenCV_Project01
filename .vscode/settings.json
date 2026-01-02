@@ -1,0 +1,4 @@
+{
+    "python.terminal.executeInFileDir": true,
+    "cmake.sourceDirectory": "/home/robot/work/Robot-AI/OpenCV/Code4/Code4.1"
+}
