@@ -6,129 +6,120 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
+#include <numeric>
+#include <algorithm>
 
 class PlateCountGame : public GameStrategy {
 private:
     WebcamManager& webcam;
-    cv::Mat plateTemplate;
 
 public:
     PlateCountGame(WebcamManager& wm) : webcam(wm) {}
 
     virtual GameState run() override {
-        std::cout << "Starting Plate Count Game..." << std::endl;
+        std::cout << "Starting Plate Count Game (Template Matching)..." << std::endl;
         
-        // Load the template image
-        plateTemplate = cv::imread("com_plate.jpg");
-        cv::Mat binaryPattern;
-
-        if (plateTemplate.empty()) {
-            std::cerr << "Error: com_plate.jpg not found!" << std::endl;
+        // Load images as grayscale
+        cv::Mat templateImg = cv::imread("com_plate1.jpg", cv::IMREAD_GRAYSCALE);
+        cv::Mat sceneImg = cv::imread("plate_block.jpg", cv::IMREAD_GRAYSCALE);
+        
+        if (templateImg.empty()) {
+            std::cerr << "Error: com_plate1.jpg not found!" << std::endl;
+            return GameState::EXIT;
+        }
+        if (sceneImg.empty()) {
+            std::cerr << "Error: plate_block.jpg not found!" << std::endl;
+            sceneImg = cv::Mat::zeros(480, 640, CV_8UC1);
+            cv::putText(sceneImg, "plate_block.jpg NOT FOUND", cv::Point(50, 240), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 2);
         } else {
-            cv::Mat gray;
-            cv::cvtColor(plateTemplate, gray, cv::COLOR_BGR2GRAY);
-            cv::threshold(gray, binaryPattern, 128, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+            // Preprocessing: Brightness + 50, Gaussian Blur
+            sceneImg = sceneImg + 50;
+            cv::GaussianBlur(sceneImg, sceneImg, cv::Size(5, 5), 0);
         }
 
-        bool isResultMode = false;
-        cv::Mat capturedFrame;
-        int capturedCount = 0;
+        // 1. Template Matching
+        cv::Mat result;
+        cv::matchTemplate(sceneImg, templateImg, result, cv::TM_CCOEFF_NORMED);
 
-        while (true) {
-            if (!isResultMode) {
-                // Preview Mode
-                cv::Mat frame;
-                if (!webcam.getFrame(frame)) return GameState::EXIT;
-                cv::flip(frame, frame, 1); // Mirror view
-
-                // Define ROI (500x500 centered)
-                int roiSize = 500;
-                int x = std::max(0, (frame.cols - roiSize) / 2);
-                int y = std::max(0, (frame.rows - roiSize) / 2);
-                int w = std::min(roiSize, frame.cols - x);
-                int h = std::min(roiSize, frame.rows - y);
-                cv::Rect roiRect(x, y, w, h);
-
-                // Draw ROI box
-                cv::rectangle(frame, roiRect, cv::Scalar(0, 255, 255), 2);
-                
-                // Display binary pattern thumbnail
-                if (!binaryPattern.empty()) {
-                    cv::Mat smallPattern;
-                    cv::resize(binaryPattern, smallPattern, cv::Size(100, 100));
-                    cv::cvtColor(smallPattern, smallPattern, cv::COLOR_GRAY2BGR);
-                    
-                    cv::Rect patternRoi(frame.cols - 110, 10, 100, 100);
-                    if (patternRoi.x >= 0 && patternRoi.y >= 0 && 
-                        patternRoi.x + patternRoi.width <= frame.cols && 
-                        patternRoi.y + patternRoi.height <= frame.rows) {
-                        smallPattern.copyTo(frame(patternRoi));
-                        cv::rectangle(frame, patternRoi, cv::Scalar(0, 255, 0), 1);
-                        cv::putText(frame, "Binary", cv::Point(frame.cols - 110, 125), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 255, 0), 1);
-                    }
-                }
-
-                cv::putText(frame, "Place objects in box", cv::Point(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 255), 2);
-                cv::putText(frame, "Press SPACE to Capture", cv::Point(20, 60), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 255), 2);
-
-                cv::imshow("GAME", frame);
-
-                int key = cv::waitKey(10);
-                if (key == 27) return GameState::EXIT;
-                if (key == 32) { // Space to Capture
-                    capturedFrame = frame(roiRect).clone();
-                    
-                    // Analyze captured frame
-                    if (!binaryPattern.empty()) {
-                        cv::Mat grayFrame, binaryFrame;
-                        cv::cvtColor(capturedFrame, grayFrame, cv::COLOR_BGR2GRAY);
-                        cv::threshold(grayFrame, binaryFrame, 128, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-                        
-                        cv::Mat result;
-                        capturedCount = 0;
-                        
-                        if (binaryPattern.cols <= binaryFrame.cols && binaryPattern.rows <= binaryFrame.rows) {
-                            cv::matchTemplate(binaryFrame, binaryPattern, result, cv::TM_CCORR_NORMED);
-                            double threshold = 0.8;
-                            
-                            while (true) {
-                                double minVal, maxVal;
-                                cv::Point minLoc, maxLoc;
-                                cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
-
-                                if (maxVal >= threshold) {
-                                    capturedCount++;
-                                    cv::rectangle(capturedFrame, maxLoc, cv::Point(maxLoc.x + binaryPattern.cols, maxLoc.y + binaryPattern.rows), cv::Scalar(0, 255, 255), 2);
-                                    
-                                    int startX = std::max(0, maxLoc.x - binaryPattern.cols / 2);
-                                    int startY = std::max(0, maxLoc.y - binaryPattern.rows / 2);
-                                    int endX = std::min(result.cols, maxLoc.x + binaryPattern.cols / 2);
-                                    int endY = std::min(result.rows, maxLoc.y + binaryPattern.rows / 2);
-                                    
-                                    cv::rectangle(result, cv::Point(startX, startY), cv::Point(endX, endY), cv::Scalar(0), -1);
-                                } else {
-                                    break;
-                                }
-                                if (capturedCount > 50) break;
-                            }
-                        }
-                    }
-                    isResultMode = true;
-                }
-            } else {
-                // Result Mode
-                cv::Mat displayFrame = capturedFrame.clone();
-                cv::putText(displayFrame, "Count: " + std::to_string(capturedCount), cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.5, cv::Scalar(0, 0, 255), 3);
-                cv::putText(displayFrame, "Press 'R' to Retry", cv::Point(20, displayFrame.rows - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 2);
-                
-                cv::imshow("GAME", displayFrame);
-                
-                int key = cv::waitKey(10);
-                if (key == 27) return GameState::EXIT;
-                if (key == 'r' || key == 'R') {
-                    isResultMode = false;
+        // 2. Threshold and NMS
+        double threshold = 0.5;
+        std::vector<cv::Point> locations;
+        std::vector<float> scores;
+        
+        // Find all locations above threshold
+        for(int y = 0; y < result.rows; y++) {
+            for(int x = 0; x < result.cols; x++) {
+                float score = result.at<float>(y, x);
+                if (score >= threshold) {
+                    locations.push_back(cv::Point(x, y));
+                    scores.push_back(score);
                 }
             }
+        }
+
+        // Simple NMS
+        std::vector<cv::Rect> detectedRects;
+        std::vector<float> detectedScores;
+        int w = templateImg.cols;
+        int h = templateImg.rows;
+
+        // Sort by score descending
+        std::vector<int> indices(scores.size());
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), [&](int a, int b) {
+            return scores[a] > scores[b];
+        });
+
+        for (int idx : indices) {
+            cv::Point pt = locations[idx];
+            cv::Rect rect(pt.x, pt.y, w, h);
+            bool overlap = false;
+            for (const auto& existing : detectedRects) {
+                cv::Rect intersection = rect & existing;
+                if (intersection.area() > (rect.area() * 0.3)) { // 30% overlap threshold
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) {
+                detectedRects.push_back(rect);
+                detectedScores.push_back(scores[idx]);
+            }
+        }
+
+        int count = detectedRects.size();
+        cv::Mat resultImg;
+        cv::cvtColor(sceneImg, resultImg, cv::COLOR_GRAY2BGR);
+        
+        // Draw Detections
+        for (size_t i = 0; i < detectedRects.size(); i++) {
+            cv::rectangle(resultImg, detectedRects[i], cv::Scalar(0, 255, 0), 2);
+            cv::putText(resultImg, std::to_string(detectedScores[i]).substr(0, 4), detectedRects[i].tl(), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 255, 0), 1);
+        }
+
+        // 4. Prepare Display
+        // Resize template preserving aspect ratio
+        double scale = std::min(100.0 / templateImg.cols, 100.0 / templateImg.rows);
+        cv::Size newSize(int(templateImg.cols * scale), int(templateImg.rows * scale));
+        cv::Mat smallTemplate;
+        cv::resize(templateImg, smallTemplate, newSize);
+        cv::cvtColor(smallTemplate, smallTemplate, cv::COLOR_GRAY2BGR);
+        
+        // Removed forced resize of resultImg to preserve aspect ratio
+
+        cv::Rect templateRoi(10, 10, newSize.width, newSize.height);
+        if (templateRoi.x + templateRoi.width <= resultImg.cols && templateRoi.y + templateRoi.height <= resultImg.rows) {
+             smallTemplate.copyTo(resultImg(templateRoi));
+             cv::rectangle(resultImg, templateRoi, cv::Scalar(255, 255, 255), 1);
+             cv::putText(resultImg, "Template", cv::Point(10, 125), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255, 255, 255), 1);
+        }
+        
+        cv::putText(resultImg, "Count: " + std::to_string(count), cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+
+        while (true) {
+            cv::imshow("GAME", resultImg);
+            int key = cv::waitKey(10);
+            if (key == 27) return GameState::EXIT;
         }
         return GameState::EXIT;
     }
