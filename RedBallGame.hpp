@@ -28,6 +28,7 @@ private:
     Ball redBall;
     KimFace kimFace;
     bool useFaceMode;
+    double rotationAngle;
     cv::Mat prev_gray;
     int score;
 
@@ -38,7 +39,7 @@ private:
     }
 
 public:
-    RedBallGame(WebcamManager& wm) : webcam(wm), score(0), useFaceMode(false) {
+    RedBallGame(WebcamManager& wm) : webcam(wm), score(0), useFaceMode(false), rotationAngle(0.0) {
         srand((unsigned int)time(0));
     }
 
@@ -81,16 +82,15 @@ public:
                 int area = (redBall.radius * 2) * (redBall.radius * 2);
                 if (movementPixels > area * 0.1) {
                     SoundManager::playBeep();
-                    if (useFaceMode) {
-                        kimFace.hit();
-                    }
+                    // Face Mode에서는 색상 변경(hit) 제거
                     std::cout << "터치 " << score++ << "\r\n";
                     redBall.position = getRandomPosition(width, height, redBall.radius);
                 }
             }
 
             if (useFaceMode) {
-                kimFace.draw(frame, redBall.position, redBall.radius);
+                rotationAngle += 10.0; // 회전
+                kimFace.draw(frame, redBall.position, redBall.radius, rotationAngle);
             } else {
                 cv::circle(frame, redBall.position, redBall.radius, cv::Scalar(0, 0, 255), -1);
             }

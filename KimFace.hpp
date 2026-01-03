@@ -45,7 +45,7 @@ public:
     }
 
     // 화면에 얼굴 그리기
-    void draw(cv::Mat& frame, cv::Point center, int radius) {
+    void draw(cv::Mat& frame, cv::Point center, int radius, double angle = 0.0) {
         if (currentImage.empty()) {
             // 이미지가 없으면 그냥 빨간 원 그리기 (fallback)
             cv::circle(frame, center, radius, cv::Scalar(0, 0, 255), -1);
@@ -55,6 +55,13 @@ public:
         // 1. 얼굴 이미지를 공 크기에 맞게 리사이즈 (지름 = radius * 2)
         cv::Mat resized;
         cv::resize(currentImage, resized, cv::Size(radius * 2, radius * 2));
+
+        // 1.5 회전 적용
+        if (angle != 0.0) {
+            cv::Point2f pt(resized.cols / 2.0f, resized.rows / 2.0f);
+            cv::Mat r = cv::getRotationMatrix2D(pt, angle, 1.0);
+            cv::warpAffine(resized, resized, r, resized.size());
+        }
 
         // 2. 원형 마스크 생성
         cv::Mat mask = cv::Mat::zeros(resized.size(), CV_8UC1);
@@ -78,6 +85,16 @@ public:
     
     bool isLoaded() const {
         return !currentImage.empty();
+    }
+
+    cv::Mat getCurrentImage() const {
+        return currentImage.clone();
+    }
+
+    void resize(int w, int h) {
+        if (!currentImage.empty()) {
+            cv::resize(currentImage, currentImage, cv::Size(w, h));
+        }
     }
 };
 

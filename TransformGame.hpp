@@ -4,6 +4,7 @@
 #include "GameStrategy.hpp"
 #include "WebcamManager.hpp"
 #include "SoundManager.hpp"
+#include "KimFace.hpp"
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
@@ -18,7 +19,7 @@ struct Decoy {
 class TransformGame : public GameStrategy {
 private:
     WebcamManager& webcam;
-    cv::Mat currentImage; // 원본 이미지
+    KimFace kimFace; // KimFace 사용
     cv::Mat currentMask;
     cv::Point currentPos; // 원본 위치
     
@@ -32,13 +33,13 @@ public:
         srand((unsigned int)time(0));
     }
 
-    void addRandomDecoy(int screenWidth, int screenHeight) {
-        if (currentImage.empty()) return;
+    void addRandomDecoy(int screenWidth, int screenHeight, cv::Mat sourceImg) {
+        if (sourceImg.empty()) return;
 
-        cv::Mat nextImg = currentImage.clone();
+        cv::Mat nextImg = sourceImg.clone();
         cv::Mat nextMask = currentMask.clone();
         
-        int type = rand() % 3; // 0: Shear, 1: Rotate, 2: Flip
+        int type = rand() % 5; // 0: Shear, 1: Rotate, 2: Flip, 3: Grayscale, 4: Invert
 
         if (type == 0) { // Shear (전단)
             double shx = (rand() % 100 - 50) / 200.0; // -0.25 ~ 0.25
@@ -60,6 +61,14 @@ public:
             int flipCode = (rand() % 3) - 1; // -1, 0, 1
             cv::flip(nextImg, nextImg, flipCode);
             cv::flip(nextMask, nextMask, flipCode);
+        }
+        else if (type == 3) { // Grayscale (흑백)
+            cv::Mat gray;
+            cv::cvtColor(nextImg, gray, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(gray, nextImg, cv::COLOR_GRAY2BGR); // 다시 3채널로 변환해야 copyTo 가능
+        }
+        else if (type == 4) { // Color Inversion (색 반전)
+            cv::bitwise_not(nextImg, nextImg);
         }
 
         // 랜덤 위치 (화면 전체 영역 중 랜덤)
@@ -93,24 +102,23 @@ public:
     }
 
     virtual void run() override {
-        cv::Mat original = cv::imread("kimsh.jpg");
-        if (original.empty()) {
+        if (!kimFace.load("kimsh.jpg")) {
             std::cerr << "Error: kimsh.jpg not found!" << std::endl;
             return;
         }
         
-        // 원본 이미지 200x200으로 리사이즈
-        cv::resize(original, original, cv::Size(200, 200));
+        // 원본 이미지 200x200으로 리사이즈 (KimFace 내부 이미지 변경)
+        kimFace.resize(200, 200);
         
-        currentImage = original.clone();
-        // 마스크 생성 (흰색)
-        currentMask = cv::Mat(original.size(), CV_8UC1, cv::Scalar(255));
+        // 마스크 생성 (흰색) - 초기 이미지 기준
+        cv::Mat tempImg = kimFace.getCurrentImage();
+        currentMask = cv::Mat(tempImg.size(), CV_8UC1, cv::Scalar(255));
 
         int width = webcam.getWidth();
         int height = webcam.getHeight();
         
         // 원본 위치: 화면 중앙 고정
-        currentPos = cv::Point((width - currentImage.cols) / 2, (height - currentImage.rows) / 2);
+        currentPos = cv::Point((width - tempImg.cols) / 2, (height - tempImg.rows) / 2);
 
         while (true) {
             cv::Mat frame, gray_frame, diff, thresh;
@@ -129,6 +137,7 @@ public:
             cv::threshold(diff, thresh, 25.0, 255.0, cv::THRESH_BINARY);
 
             // 충돌 체크 (원본 이미지만 판정)
+            cv::Mat currentImage = kimFace.getCurrentImage(); // 현재 색상의 이미지 가져오기
             cv::Rect imgRect(currentPos, currentImage.size());
             cv::Rect frameRect(0, 0, width, height);
             cv::Rect intersection = imgRect & frameRect;
@@ -143,8 +152,11 @@ public:
                     hitCount++;
                     std::cout << "Hit! " << hitCount << std::endl;
                     
-                    // 변형된 이미지 추가 (랜덤 위치)
-                    addRandomDecoy(width, height);
+                    // 1. 색상 변경 (Morphing)
+                    kimFace.hit();
+                    
+                    // 2. 변형된 이미지 추가 (Popping/Transform) - 변경된 색상으로
+                    addRandomDecoy(width, height, kimFace.getCurrentImage());
                     
                     // 연속 히트 방지를 위한 짧은 대기 및 배경 갱신
                     cv::waitKey(100);
@@ -158,8 +170,8 @@ public:
                 drawToFrame(frame, decoy.img, decoy.mask, decoy.pos);
             }
 
-            // 2. 원본 이미지 그리기 (맨 위에)
-            drawToFrame(frame, currentImage, currentMask, currentPos);
+            // 2. 원본 이미지 그리기 (맨 위에) - 현재 색상 반영
+            drawToFrame(frame, kimFace.getCurrentImage(), currentMask, currentPos);
 
             cv::putText(frame, "Hit: " + std::to_string(hitCount), cv::Point(20, 30),
                 cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(255, 255, 255), 2);
