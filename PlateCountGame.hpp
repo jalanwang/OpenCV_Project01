@@ -27,6 +27,10 @@ public:
             std::cerr << "Error: com_plate1.jpg not found!" << std::endl;
             return GameState::EXIT;
         }
+        
+        // Increase brightness of template
+        templateImg = templateImg + 50;
+
         if (sceneImg.empty()) {
             std::cerr << "Error: plate_block.jpg not found!" << std::endl;
             sceneImg = cv::Mat::zeros(480, 640, CV_8UC1);
@@ -42,7 +46,7 @@ public:
         cv::matchTemplate(sceneImg, templateImg, result, cv::TM_CCOEFF_NORMED);
 
         // 2. Threshold and NMS
-        double threshold = 0.5;
+        double threshold = 0.4;
         std::vector<cv::Point> locations;
         std::vector<float> scores;
         
