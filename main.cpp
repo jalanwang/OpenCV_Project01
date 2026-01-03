@@ -7,6 +7,7 @@
 #include "RedBallGame.hpp"
 #include "TransformGame.hpp"
 #include "QRGame.hpp"
+#include "PlateCountGame.hpp"
 
 int main()
 {
@@ -29,6 +30,8 @@ int main()
             game = std::make_unique<TransformGame>(webcam);
         } else if (currentState == GameState::QR_GAME) {
             game = std::make_unique<QRGame>(webcam);
+        } else if (currentState == GameState::PLATE_COUNT_GAME) {
+            game = std::make_unique<PlateCountGame>(webcam);
         }
 
         if (game) {

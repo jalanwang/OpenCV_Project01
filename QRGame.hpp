@@ -45,6 +45,7 @@ public:
 
             int key = cv::waitKey(10);
             if (key == 27) return GameState::EXIT; // ESC to exit
+            if (key == 32) return GameState::PLATE_COUNT_GAME; // Space to Plate Count Game
         }
         return GameState::EXIT;
     }
