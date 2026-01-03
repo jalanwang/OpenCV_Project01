@@ -4,6 +4,7 @@
 #include "GameStrategy.hpp"
 #include "WebcamManager.hpp"
 #include "SoundManager.hpp"
+#include "KimFace.hpp"
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <iostream>
@@ -24,6 +25,8 @@ class RedBallGame : public GameStrategy {
 private:
     WebcamManager& webcam;
     Ball redBall;
+    KimFace kimFace;
+    bool useFaceMode;
     cv::Mat prev_gray;
     int score;
 
@@ -34,11 +37,12 @@ private:
     }
 
 public:
-    RedBallGame(WebcamManager& wm) : webcam(wm), score(0) {
+    RedBallGame(WebcamManager& wm) : webcam(wm), score(0), useFaceMode(false) {
         srand((unsigned int)time(0));
     }
 
     virtual void run() override {
+        kimFace.load("kimsh.jpg");
         int width = webcam.getWidth();
         int height = webcam.getHeight();
 
@@ -76,21 +80,38 @@ public:
                 int area = (redBall.radius * 2) * (redBall.radius * 2);
                 if (movementPixels > area * 0.1) {
                     SoundManager::playBeep();
+                    if (useFaceMode) {
+                        kimFace.hit();
+                    }
                     std::cout << "터치 " << score++ << "\r\n";
                     redBall.position = getRandomPosition(width, height, redBall.radius);
                 }
             }
 
-            cv::circle(frame, redBall.position, redBall.radius, cv::Scalar(0, 0, 255), -1);
+            if (useFaceMode) {
+                kimFace.draw(frame, redBall.position, redBall.radius);
+            } else {
+                cv::circle(frame, redBall.position, redBall.radius, cv::Scalar(0, 0, 255), -1);
+            }
+            
             cv::putText(frame, "Score : " + std::to_string(score), cv::Point(20, 30),
                 cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(255, 255, 255), 2);
+            
+            if (useFaceMode) {
+                cv::putText(frame, "Mode: Face", cv::Point(20, 60), cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 255, 255), 2);
+            } else {
+                cv::putText(frame, "Mode: Ball", cv::Point(20, 60), cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 255, 255), 2);
+            }
 
             cv::namedWindow("GAME");
             cv::imshow("GAME", frame);
             gray_frame.copyTo(prev_gray);
 
-            if (cv::waitKey(10) == 27)
+            int key = cv::waitKey(10);
+            if (key == 27) // ESC
                 break;
+            else if (key == 32) // Space
+                useFaceMode = !useFaceMode;
         }
         cv::destroyAllWindows();
     }
