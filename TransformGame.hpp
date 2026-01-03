@@ -184,7 +184,9 @@ public:
             cv::imshow("GAME", frame);
             gray_frame.copyTo(prev_gray);
 
-            if (cv::waitKey(10) == 27) return GameState::EXIT;
+            int key = cv::waitKey(10);
+            if (key == 27) return GameState::EXIT;
+            if (key == 32) return GameState::QR_GAME;
         }
         cv::destroyAllWindows();
         return GameState::EXIT;

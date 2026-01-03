@@ -6,6 +6,7 @@
 #include "GameStrategy.hpp"
 #include "RedBallGame.hpp"
 #include "TransformGame.hpp"
+#include "QRGame.hpp"
 
 int main()
 {
@@ -26,6 +27,8 @@ int main()
             game = std::make_unique<RedBallGame>(webcam);
         } else if (currentState == GameState::TRANSFORM) {
             game = std::make_unique<TransformGame>(webcam);
+        } else if (currentState == GameState::QR_GAME) {
+            game = std::make_unique<QRGame>(webcam);
         }
 
         if (game) {
