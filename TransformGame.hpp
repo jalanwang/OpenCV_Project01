@@ -38,6 +38,11 @@ public:
 
         cv::Mat nextImg = sourceImg.clone();
         cv::Mat nextMask = currentMask.clone();
+
+        // 랜덤 크기 조절 (0.5 ~ 1.5배)
+        double scale = (rand() % 101 + 50) / 100.0; // 0.5 ~ 1.5
+        cv::resize(nextImg, nextImg, cv::Size(), scale, scale);
+        cv::resize(nextMask, nextMask, cv::Size(), scale, scale);
         
         int type = rand() % 5; // 0: Shear, 1: Rotate, 2: Flip, 3: Grayscale, 4: Invert
 
@@ -101,10 +106,10 @@ public:
         }
     }
 
-    virtual void run() override {
+    virtual GameState run() override {
         if (!kimFace.load("kimsh.jpg")) {
             std::cerr << "Error: kimsh.jpg not found!" << std::endl;
-            return;
+            return GameState::EXIT;
         }
         
         // 원본 이미지 200x200으로 리사이즈 (KimFace 내부 이미지 변경)
@@ -122,7 +127,7 @@ public:
 
         while (true) {
             cv::Mat frame, gray_frame, diff, thresh;
-            if (!webcam.getFrame(frame)) break;
+            if (!webcam.getFrame(frame)) return GameState::EXIT;
             cv::flip(frame, frame, 1);
 
             cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
@@ -179,9 +184,10 @@ public:
             cv::imshow("GAME", frame);
             gray_frame.copyTo(prev_gray);
 
-            if (cv::waitKey(10) == 27) break;
+            if (cv::waitKey(10) == 27) return GameState::EXIT;
         }
         cv::destroyAllWindows();
+        return GameState::EXIT;
     }
 };
 

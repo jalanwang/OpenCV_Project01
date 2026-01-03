@@ -16,10 +16,24 @@ int main()
         return -1;
     }
 
-    // 전략 패턴 사용: RedBallGame 선택
-    std::unique_ptr<GameStrategy> game = std::make_unique<RedBallGame>(webcam);
-    game->run();
+    // 전략 패턴 개선: Context 역할을 main 루프가 수행하여 전략 간 전환 관리
+    GameState currentState = GameState::RED_BALL;
+
+    while (currentState != GameState::EXIT) {
+        std::unique_ptr<GameStrategy> game;
+
+        if (currentState == GameState::RED_BALL) {
+            game = std::make_unique<RedBallGame>(webcam);
+        } else if (currentState == GameState::TRANSFORM) {
+            game = std::make_unique<TransformGame>(webcam);
+        }
+
+        if (game) {
+            currentState = game->run();
+        } else {
+            break;
+        }
+    }
 
     return 0;
 }
-

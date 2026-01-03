@@ -5,7 +5,6 @@
 #include "WebcamManager.hpp"
 #include "SoundManager.hpp"
 #include "KimFace.hpp"
-#include "TransformGame.hpp"
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <iostream>
@@ -43,7 +42,7 @@ public:
         srand((unsigned int)time(0));
     }
 
-    virtual void run() override {
+    virtual GameState run() override {
         kimFace.load("kimsh.jpg");
         int width = webcam.getWidth();
         int height = webcam.getHeight();
@@ -53,7 +52,7 @@ public:
 
         while (true) {
             cv::Mat frame, gray_frame, diff, thresh;
-            if (!webcam.getFrame(frame)) break;
+            if (!webcam.getFrame(frame)) return GameState::EXIT;
 
             cv::flip(frame, frame, 1); // 반전
 
@@ -110,19 +109,18 @@ public:
 
             int key = cv::waitKey(10);
             if (key == 27) // ESC
-                break;
+                return GameState::EXIT;
             else if (key == 32) { // Space
                 if (!useFaceMode) {
                     useFaceMode = true;
                 } else {
                     cv::destroyAllWindows();
-                    TransformGame tg(webcam);
-                    tg.run();
-                    break;
+                    return GameState::TRANSFORM;
                 }
             }
         }
         cv::destroyAllWindows();
+        return GameState::EXIT;
     }
 };
 
