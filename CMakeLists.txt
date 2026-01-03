@@ -14,7 +14,7 @@ add_executable(main main.cpp WebcamManager.hpp GameStrategy.hpp RedBallGame.hpp 
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # 위에서 찾은 OpenCV 라이브러리 정보(${OpenCV_LIBS})를 'main' 실행 파일에 링크(연결)합니다.
-target_link_libraries(main ${OpenCV_LIBS})
+target_link_libraries(main ${OpenCV_LIBS} pthread)
 
 # 단일 파일일 경우의 예시
 # cmake_minimum_required(VERSION 3.10)
