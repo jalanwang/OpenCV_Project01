@@ -5,6 +5,7 @@
 #include "WebcamManager.hpp"
 #include "GameStrategy.hpp"
 #include "RedBallGame.hpp"
+#include "TransformGame.hpp"
 
 int main()
 {

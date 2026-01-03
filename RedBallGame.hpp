@@ -5,6 +5,7 @@
 #include "WebcamManager.hpp"
 #include "SoundManager.hpp"
 #include "KimFace.hpp"
+#include "TransformGame.hpp"
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <iostream>
@@ -110,8 +111,16 @@ public:
             int key = cv::waitKey(10);
             if (key == 27) // ESC
                 break;
-            else if (key == 32) // Space
-                useFaceMode = !useFaceMode;
+            else if (key == 32) { // Space
+                if (!useFaceMode) {
+                    useFaceMode = true;
+                } else {
+                    cv::destroyAllWindows();
+                    TransformGame tg(webcam);
+                    tg.run();
+                    break;
+                }
+            }
         }
         cv::destroyAllWindows();
     }
