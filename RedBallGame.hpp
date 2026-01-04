@@ -50,6 +50,9 @@ public:
         redBall.radius = 20;
         redBall.position = getRandomPosition(width, height, redBall.radius);
 
+        cv::namedWindow("GAME");
+        cv::moveWindow("GAME", 0, 0);
+
         while (true) {
             cv::Mat frame, gray_frame, diff, thresh;
             if (!webcam.getFrame(frame)) return GameState::EXIT;
@@ -103,7 +106,6 @@ public:
                 cv::putText(frame, "Mode: Ball", cv::Point(20, 60), cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 255, 255), 2);
             }
 
-            cv::namedWindow("GAME");
             cv::imshow("GAME", frame);
             gray_frame.copyTo(prev_gray);
 

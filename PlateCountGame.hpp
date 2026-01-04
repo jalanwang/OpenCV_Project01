@@ -120,6 +120,9 @@ public:
         
         cv::putText(resultImg, "Count: " + std::to_string(count), cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
 
+        cv::namedWindow("GAME");
+        cv::moveWindow("GAME", 0, 0);
+
         while (true) {
             cv::imshow("GAME", resultImg);
             int key = cv::waitKey(10);

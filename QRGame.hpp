@@ -17,6 +17,8 @@ public:
 
     virtual GameState run() override {
         std::cout << "Starting QR Game..." << std::endl;
+        cv::namedWindow("GAME");
+        cv::moveWindow("GAME", 0, 0);
         while (true) {
             cv::Mat frame;
             if (!webcam.getFrame(frame)) return GameState::EXIT;

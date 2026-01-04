@@ -125,6 +125,9 @@ public:
         // 원본 위치: 화면 중앙 고정
         currentPos = cv::Point((width - tempImg.cols) / 2, (height - tempImg.rows) / 2);
 
+        cv::namedWindow("GAME");
+        cv::moveWindow("GAME", 0, 0);
+
         while (true) {
             cv::Mat frame, gray_frame, diff, thresh;
             if (!webcam.getFrame(frame)) return GameState::EXIT;
